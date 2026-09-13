@@ -24,6 +24,7 @@ import com.kherio.padelmatch.data.TournamentRepository
 import com.kherio.padelmatch.ui.screens.CreateTournamentScreen
 import com.kherio.padelmatch.ui.screens.HomeScreen
 import com.kherio.padelmatch.ui.screens.PlayersScreen
+import com.kherio.padelmatch.ui.screens.SplashScreen
 import com.kherio.padelmatch.ui.screens.TournamentScreen
 import com.kherio.padelmatch.ui.theme.PadelMatchTheme
 import kotlinx.coroutines.launch
@@ -56,7 +57,16 @@ private fun AppNavHost(repository: TournamentRepository) {
     var pendingCourts by remember { mutableStateOf(2) }
     var pendingPointsTarget by remember { mutableStateOf(21) }
 
-    NavHost(navController = navController, startDestination = "home") {
+    NavHost(navController = navController, startDestination = "splash") {
+        composable("splash") {
+            SplashScreen(
+                onFinished = {
+                    navController.navigate("home") {
+                        popUpTo("splash") { inclusive = true }
+                    }
+                }
+            )
+        }
         composable("home") {
             HomeScreen(
                 repository = repository,

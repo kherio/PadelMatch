@@ -1,3 +1,5 @@
 <resources>
-    <style name="Theme.PadelMatch" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.PadelMatch" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">#141414</item>
+    </style>
 </resources>
