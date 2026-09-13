@@ -309,6 +309,26 @@ private fun MatchCard(match: MatchResult, players: List<Player>, pointsTarget: I
     val team2Winning = (s2.toIntOrNull() ?: -1) > (s1.toIntOrNull() ?: -1)
     val maxDigits = pointsTarget.toString().length
 
+    // Al escribir el marcador de un equipo, se autocompleta el del otro para
+    // que la suma siempre sea igual a la puntuación objetivo del torneo.
+    fun onTeam1Change(raw: String) {
+        val digits = raw.filter { it.isDigit() }.take(maxDigits)
+        val value = digits.toIntOrNull()
+        s1 = if (value != null && value > pointsTarget) pointsTarget.toString() else digits
+        val v = s1.toIntOrNull()
+        s2 = if (v != null) (pointsTarget - v).coerceAtLeast(0).toString() else s2
+        onScoreChange(s1.toIntOrNull(), s2.toIntOrNull())
+    }
+
+    fun onTeam2Change(raw: String) {
+        val digits = raw.filter { it.isDigit() }.take(maxDigits)
+        val value = digits.toIntOrNull()
+        s2 = if (value != null && value > pointsTarget) pointsTarget.toString() else digits
+        val v = s2.toIntOrNull()
+        s1 = if (v != null) (pointsTarget - v).coerceAtLeast(0).toString() else s1
+        onScoreChange(s1.toIntOrNull(), s2.toIntOrNull())
+    }
+
     val cardElevation by animateDpAsState(
         targetValue = if (team1Winning || team2Winning) 6.dp else 2.dp,
         label = "matchCardElevation"
@@ -344,9 +364,7 @@ private fun MatchCard(match: MatchResult, players: List<Player>, pointsTarget: I
                     highlighted = team1Winning,
                     modifier = Modifier.weight(1f)
                 )
-                ScoreField(value = s1, highlighted = team1Winning, maxDigits = maxDigits) {
-                    s1 = it; onScoreChange(s1.toIntOrNull(), s2.toIntOrNull())
-                }
+                ScoreField(value = s1, highlighted = team1Winning, maxDigits = maxDigits, onChange = ::onTeam1Change)
             }
 
             Row(
@@ -368,10 +386,16 @@ private fun MatchCard(match: MatchResult, players: List<Player>, pointsTarget: I
                     highlighted = team2Winning,
                     modifier = Modifier.weight(1f)
                 )
-                ScoreField(value = s2, highlighted = team2Winning, maxDigits = maxDigits) {
-                    s2 = it; onScoreChange(s1.toIntOrNull(), s2.toIntOrNull())
-                }
+                ScoreField(value = s2, highlighted = team2Winning, maxDigits = maxDigits, onChange = ::onTeam2Change)
             }
+
+            Spacer(Modifier.height(6.dp))
+            Text(
+                "Suma: ${(s1.toIntOrNull() ?: 0) + (s2.toIntOrNull() ?: 0)} / $pointsTarget",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.align(Alignment.End)
+            )
         }
     }
 }
