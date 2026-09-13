@@ -47,10 +47,28 @@ a montarlo cuando quieras.
 
 ## Icono de la app
 
-He dejado un icono del sistema por defecto (`@android:drawable/ic_menu_camera`)
-para que compile sin problemas desde el primer momento. Cuando quieras,
-genera el tuyo desde Android Studio con `File > New > Image Asset` y
-sustitúyelo en `AndroidManifest.xml` por `@mipmap/ic_launcher`.
+El icono es el logo de Artaza Torresolo Pádel Club que subiste, generado en
+todas las resoluciones mipmap necesarias (`app/src/main/res/mipmap-*/`).
+
+## Sobre el Gradle Wrapper
+
+He fijado la versión de Gradle en `gradle/wrapper/gradle-wrapper.properties`
+(8.9, compatible con AGP 8.6.0, que exige mínimo la 8.7), pero **no incluyo
+el binario `gradle-wrapper.jar`** porque este entorno no tiene acceso a los
+servidores de Gradle para descargarlo. Sin ese jar, `gradlew`/`gradlew.bat`
+no funcionarán desde la terminal.
+
+La forma más rápida de arreglarlo: abre una terminal dentro de Android
+Studio (pestaña "Terminal" abajo) y ejecuta:
+
+```
+gradle wrapper --gradle-version 8.9
+```
+
+Esto usa el Gradle que ya trae Android Studio instalado para generar el
+`gradle-wrapper.jar` y los scripts que faltan. Alternativamente, Android
+Studio suele detectar el wrapper incompleto al abrir el proyecto y ofrecer
+un botón para arreglarlo automáticamente.
 
 ## Estructura
 
