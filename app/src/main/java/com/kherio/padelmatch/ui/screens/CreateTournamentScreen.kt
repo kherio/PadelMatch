@@ -1,7 +1,11 @@
 package com.kherio.padelmatch.ui.screens
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -19,15 +23,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.kherio.padelmatch.data.TournamentFormat
 
+private val POINT_OPTIONS = listOf(14, 21, 24, 31)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateTournamentScreen(
     onBack: () -> Unit,
-    onNext: (name: String, format: TournamentFormat, courts: Int) -> Unit
+    onNext: (name: String, format: TournamentFormat, courts: Int, pointsTarget: Int) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
     var format by remember { mutableStateOf(TournamentFormat.AMERICANO) }
     var courts by remember { mutableStateOf(2) }
+    var pointsTarget by remember { mutableStateOf(21) }
 
     Scaffold(topBar = {
         TopAppBar(
@@ -75,6 +82,21 @@ fun CreateTournamentScreen(
             }
 
             Column {
+                Text("¿A cuántos puntos se juegan los partidos?", style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(10.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    POINT_OPTIONS.forEach { points ->
+                        PointsChip(
+                            points = points,
+                            selected = pointsTarget == points,
+                            modifier = Modifier.weight(1f),
+                            onClick = { pointsTarget = points }
+                        )
+                    }
+                }
+            }
+
+            Column {
                 Text("Número de pistas", style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(10.dp))
                 Card(
@@ -108,7 +130,7 @@ fun CreateTournamentScreen(
             Spacer(Modifier.weight(1f))
 
             Button(
-                onClick = { onNext(name.ifBlank { "Torneo de pádel" }, format, courts) },
+                onClick = { onNext(name.ifBlank { "Torneo de pádel" }, format, courts, pointsTarget) },
                 shape = RoundedCornerShape(50),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
@@ -125,6 +147,35 @@ fun CreateTournamentScreen(
 }
 
 @Composable
+private fun PointsChip(points: Int, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val containerColor by animateColorAsState(
+        targetValue = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+        label = "pointsChipBg"
+    )
+    val contentColor by animateColorAsState(
+        targetValue = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+        label = "pointsChipFg"
+    )
+    val scale by animateDpAsState(
+        targetValue = if (selected) 2.dp else 0.dp,
+        animationSpec = spring(),
+        label = "pointsChipScale"
+    )
+
+    Box(
+        modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(containerColor)
+            .border(scale, MaterialTheme.colorScheme.primary, RoundedCornerShape(14.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 14.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text("$points", fontWeight = FontWeight.Bold, color = contentColor, style = MaterialTheme.typography.titleMedium)
+    }
+}
+
+@Composable
 private fun FormatOptionCard(
     title: String,
     subtitle: String,
@@ -132,13 +183,17 @@ private fun FormatOptionCard(
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
-    val containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
+    val containerColor by animateColorAsState(
+        targetValue = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+        label = "formatCardBg"
+    )
     val contentColor = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
     val borderColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+    val borderWidth by animateDpAsState(targetValue = if (selected) 2.dp else 1.dp, label = "formatCardBorder")
 
     Card(
         modifier = modifier
-            .border(if (selected) 2.dp else 1.dp, borderColor, RoundedCornerShape(16.dp)),
+            .border(borderWidth, borderColor, RoundedCornerShape(16.dp)),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = containerColor),
         onClick = onClick
@@ -161,8 +216,7 @@ private fun RoundIconButton(icon: androidx.compose.ui.graphics.vector.ImageVecto
         Modifier
             .size(44.dp)
             .clip(CircleShape)
-            .background(bg)
-            .then(if (enabled) Modifier else Modifier),
+            .background(bg),
         contentAlignment = Alignment.Center
     ) {
         IconButton(onClick = onClick, enabled = enabled) {

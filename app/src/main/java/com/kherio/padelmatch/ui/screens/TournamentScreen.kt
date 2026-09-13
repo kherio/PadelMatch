@@ -1,6 +1,18 @@
 package com.kherio.padelmatch.ui.screens
 
 import android.content.Intent
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -120,30 +132,61 @@ fun TournamentScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         item {
-                            Text(
-                                "Ronda ${currentRound.number}",
-                                style = MaterialTheme.typography.titleLarge,
-                                color = MaterialTheme.colorScheme.onBackground
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                                AnimatedContent(
+                                    targetState = currentRound.number,
+                                    transitionSpec = {
+                                        (slideInHorizontally { it } + fadeIn()) togetherWith
+                                            (slideOutHorizontally { -it } + fadeOut())
+                                    },
+                                    label = "roundNumber"
+                                ) { number ->
+                                    Text(
+                                        "Ronda $number",
+                                        style = MaterialTheme.typography.titleLarge,
+                                        color = MaterialTheme.colorScheme.onBackground
+                                    )
+                                }
+                                Surface(
+                                    shape = RoundedCornerShape(50),
+                                    color = MaterialTheme.colorScheme.primaryContainer
+                                ) {
+                                    Text(
+                                        "A ${t.pointsTarget} puntos",
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                            }
                         }
-                        items(currentRound.matches, key = { it.id }) { match ->
-                            MatchCard(match, t.players) { s1, s2 -> updateScore(match, s1, s2) }
+                        itemsIndexed(currentRound.matches, key = { _, m -> m.id }) { index, match ->
+                            AnimatedVisibility(
+                                visible = true,
+                                enter = fadeIn(tween(300, delayMillis = index * 60)) +
+                                    slideInVertically(tween(300, delayMillis = index * 60)) { it / 4 }
+                            ) {
+                                MatchCard(match, t.players, t.pointsTarget) { s1, s2 -> updateScore(match, s1, s2) }
+                            }
                         }
                         if (currentRound.sittingOutPlayerIds.isNotEmpty()) {
                             item {
                                 val names = currentRound.sittingOutPlayerIds
                                     .mapNotNull { id -> t.players.find { it.id == id }?.name }
                                     .joinToString(", ")
-                                Surface(
-                                    shape = RoundedCornerShape(12.dp),
-                                    color = MaterialTheme.colorScheme.surfaceVariant
-                                ) {
-                                    Text(
-                                        "Descansan: $names",
-                                        modifier = Modifier.padding(12.dp),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
+                                AnimatedVisibility(visible = true, enter = fadeIn() + expandVertically()) {
+                                    Surface(
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = MaterialTheme.colorScheme.surfaceVariant
+                                    ) {
+                                        Text(
+                                            "Descansan: $names",
+                                            modifier = Modifier.padding(12.dp),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -187,8 +230,14 @@ fun TournamentScreen(
                     Modifier.fillMaxSize().padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    itemsIndexed(ranking) { index, p ->
-                        RankingRow(position = index + 1, player = p)
+                    itemsIndexed(ranking, key = { _, p -> p.id }) { index, p ->
+                        AnimatedVisibility(
+                            visible = true,
+                            enter = fadeIn(tween(250, delayMillis = index * 50)) +
+                                slideInHorizontally(tween(250, delayMillis = index * 50)) { it / 6 }
+                        ) {
+                            RankingRow(position = index + 1, player = p)
+                        }
                     }
                 }
             }
@@ -208,11 +257,19 @@ private fun SegmentedTabs(selected: Int, onSelect: (Int) -> Unit, labels: List<S
     ) {
         labels.forEachIndexed { index, label ->
             val isSelected = index == selected
+            val bgColor by animateColorAsState(
+                targetValue = if (isSelected) MaterialTheme.colorScheme.primary else androidx.compose.ui.graphics.Color.Transparent,
+                label = "tabBg"
+            )
+            val fgColor by animateColorAsState(
+                targetValue = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                label = "tabFg"
+            )
             Box(
                 Modifier
                     .weight(1f)
                     .clip(RoundedCornerShape(50))
-                    .background(if (isSelected) MaterialTheme.colorScheme.primary else androidx.compose.ui.graphics.Color.Transparent)
+                    .background(bgColor)
                     .clickableNoRipple { onSelect(index) }
                     .padding(vertical = 10.dp),
                 contentAlignment = Alignment.Center
@@ -220,7 +277,7 @@ private fun SegmentedTabs(selected: Int, onSelect: (Int) -> Unit, labels: List<S
                 Text(
                     label,
                     fontWeight = FontWeight.SemiBold,
-                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                    color = fgColor
                 )
             }
         }
@@ -242,7 +299,7 @@ private fun generateFirstRound(t: Tournament): Tournament? {
 }
 
 @Composable
-private fun MatchCard(match: MatchResult, players: List<Player>, onScoreChange: (Int?, Int?) -> Unit) {
+private fun MatchCard(match: MatchResult, players: List<Player>, pointsTarget: Int, onScoreChange: (Int?, Int?) -> Unit) {
     fun nameOf(id: String) = players.find { it.id == id }?.name ?: "?"
 
     var s1 by remember(match.id) { mutableStateOf(match.score1?.toString() ?: "") }
@@ -250,12 +307,18 @@ private fun MatchCard(match: MatchResult, players: List<Player>, onScoreChange: 
 
     val team1Winning = (s1.toIntOrNull() ?: -1) > (s2.toIntOrNull() ?: -1)
     val team2Winning = (s2.toIntOrNull() ?: -1) > (s1.toIntOrNull() ?: -1)
+    val maxDigits = pointsTarget.toString().length
+
+    val cardElevation by animateDpAsState(
+        targetValue = if (team1Winning || team2Winning) 6.dp else 2.dp,
+        label = "matchCardElevation"
+    )
 
     Card(
         Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = cardElevation)
     ) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -281,7 +344,7 @@ private fun MatchCard(match: MatchResult, players: List<Player>, onScoreChange: 
                     highlighted = team1Winning,
                     modifier = Modifier.weight(1f)
                 )
-                ScoreField(value = s1, highlighted = team1Winning) {
+                ScoreField(value = s1, highlighted = team1Winning, maxDigits = maxDigits) {
                     s1 = it; onScoreChange(s1.toIntOrNull(), s2.toIntOrNull())
                 }
             }
@@ -305,7 +368,7 @@ private fun MatchCard(match: MatchResult, players: List<Player>, onScoreChange: 
                     highlighted = team2Winning,
                     modifier = Modifier.weight(1f)
                 )
-                ScoreField(value = s2, highlighted = team2Winning) {
+                ScoreField(value = s2, highlighted = team2Winning, maxDigits = maxDigits) {
                     s2 = it; onScoreChange(s1.toIntOrNull(), s2.toIntOrNull())
                 }
             }
@@ -315,21 +378,29 @@ private fun MatchCard(match: MatchResult, players: List<Player>, onScoreChange: 
 
 @Composable
 private fun TeamNames(name1: String, name2: String, highlighted: Boolean, modifier: Modifier = Modifier) {
+    val color by animateColorAsState(
+        targetValue = if (highlighted) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurface,
+        label = "teamNameColor"
+    )
     Column(modifier) {
         Text(
             "$name1 / $name2",
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = if (highlighted) FontWeight.Bold else FontWeight.Normal,
-            color = if (highlighted) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurface
+            color = color
         )
     }
 }
 
 @Composable
-private fun ScoreField(value: String, highlighted: Boolean, onChange: (String) -> Unit) {
+private fun ScoreField(value: String, highlighted: Boolean, maxDigits: Int, onChange: (String) -> Unit) {
+    val borderColor by animateColorAsState(
+        targetValue = if (highlighted) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outline,
+        label = "scoreFieldBorder"
+    )
     OutlinedTextField(
         value = value,
-        onValueChange = { onChange(it.filter { c -> c.isDigit() }.take(2)) },
+        onValueChange = { onChange(it.filter { c -> c.isDigit() }.take(maxDigits)) },
         modifier = Modifier.width(68.dp),
         singleLine = true,
         textStyle = androidx.compose.ui.text.TextStyle(
@@ -339,7 +410,7 @@ private fun ScoreField(value: String, highlighted: Boolean, onChange: (String) -
         shape = RoundedCornerShape(12.dp),
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = MaterialTheme.colorScheme.primary,
-            unfocusedBorderColor = if (highlighted) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outline
+            unfocusedBorderColor = borderColor
         )
     )
 }

@@ -39,6 +39,7 @@ data class Tournament(
     val name: String,
     val format: TournamentFormat,
     val courts: Int,
+    val pointsTarget: Int = 21,
     var players: List<Player>,
     var rounds: List<TournamentRound> = emptyList(),
     var pastPairHistory: Set<String> = emptySet(), // "id1|id2" pairs already used together (Americano)

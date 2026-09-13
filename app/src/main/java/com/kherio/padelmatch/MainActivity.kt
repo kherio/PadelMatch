@@ -54,6 +54,7 @@ private fun AppNavHost(repository: TournamentRepository) {
     var pendingName by remember { mutableStateOf("") }
     var pendingFormat by remember { mutableStateOf(TournamentFormat.AMERICANO) }
     var pendingCourts by remember { mutableStateOf(2) }
+    var pendingPointsTarget by remember { mutableStateOf(21) }
 
     NavHost(navController = navController, startDestination = "home") {
         composable("home") {
@@ -66,10 +67,11 @@ private fun AppNavHost(repository: TournamentRepository) {
         composable("create") {
             CreateTournamentScreen(
                 onBack = { navController.popBackStack() },
-                onNext = { name, format, courts ->
+                onNext = { name, format, courts, pointsTarget ->
                     pendingName = name
                     pendingFormat = format
                     pendingCourts = courts
+                    pendingPointsTarget = pointsTarget
                     navController.navigate("players")
                 }
             )
@@ -82,6 +84,7 @@ private fun AppNavHost(repository: TournamentRepository) {
                         name = pendingName,
                         format = pendingFormat,
                         courts = pendingCourts,
+                        pointsTarget = pendingPointsTarget,
                         players = players
                     )
                     scope.launch {

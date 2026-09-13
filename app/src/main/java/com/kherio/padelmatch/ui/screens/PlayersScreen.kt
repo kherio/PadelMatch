@@ -86,7 +86,11 @@ fun PlayersScreen(
 
             LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(players, key = { it.id }) { p ->
-                    PlayerRow(player = p, onRemove = { players = players - p })
+                    PlayerRow(
+                        player = p,
+                        onRemove = { players = players - p },
+                        modifier = Modifier.animateItemPlacement()
+                    )
                 }
             }
 
@@ -107,9 +111,9 @@ fun PlayersScreen(
 }
 
 @Composable
-private fun PlayerRow(player: Player, onRemove: () -> Unit) {
+private fun PlayerRow(player: Player, onRemove: () -> Unit, modifier: Modifier = Modifier) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
