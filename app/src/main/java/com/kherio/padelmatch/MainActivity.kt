@@ -5,6 +5,12 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -39,15 +45,15 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@androidx.compose.runtime.Composable
+@Composable
 private fun AppNavHost(repository: TournamentRepository) {
     val navController = rememberNavController()
-    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val scope = rememberCoroutineScope()
 
     // Estado temporal mientras se crea un torneo nuevo (nombre/formato/pistas -> jugadores)
-    var pendingName by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
-    var pendingFormat by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(TournamentFormat.AMERICANO) }
-    var pendingCourts by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(2) }
+    var pendingName by remember { mutableStateOf("") }
+    var pendingFormat by remember { mutableStateOf(TournamentFormat.AMERICANO) }
+    var pendingCourts by remember { mutableStateOf(2) }
 
     NavHost(navController = navController, startDestination = "home") {
         composable("home") {
