@@ -1,13 +1,21 @@
 package com.kherio.padelmatch.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.kherio.padelmatch.data.Player
 
@@ -21,51 +29,115 @@ fun PlayersScreen(
     var input by remember { mutableStateOf("") }
 
     Scaffold(topBar = {
-        TopAppBar(title = { Text("Jugadores (${players.size})") })
+        TopAppBar(
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Groups, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Jugadores (${players.size})", fontWeight = FontWeight.Bold)
+                }
+            },
+            colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
+        )
     }) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
-            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+        Column(
+            Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .padding(padding)
+                .padding(20.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(
                     value = input,
                     onValueChange = { input = it },
                     label = { Text("Nombre del jugador") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(14.dp),
                     modifier = Modifier.weight(1f)
                 )
                 Spacer(Modifier.width(8.dp))
-                Button(onClick = {
-                    if (input.isNotBlank()) {
-                        players = players + Player(name = input.trim())
-                        input = ""
-                    }
-                }) { Text("Añadir") }
+                FilledIconButton(
+                    onClick = {
+                        if (input.isNotBlank()) {
+                            players = players + Player(name = input.trim())
+                            input = ""
+                        }
+                    },
+                    modifier = Modifier.size(52.dp),
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                ) {
+                    Icon(Icons.Default.PersonAdd, contentDescription = "Añadir jugador")
+                }
             }
 
-            Spacer(Modifier.height(8.dp))
-            Text("Se necesitan al menos 4 jugadores (múltiplos de 4 ideal).", style = MaterialTheme.typography.bodySmall)
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(10.dp))
+            val ready = players.size >= 4
+            Text(
+                if (ready) "¡Listo! Puedes generar la primera ronda cuando quieras."
+                else "Añade al menos 4 jugadores (idealmente múltiplos de 4).",
+                style = MaterialTheme.typography.bodySmall,
+                color = if (ready) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(12.dp))
 
-            LazyColumn(Modifier.weight(1f)) {
+            LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(players, key = { it.id }) { p ->
-                    Row(
-                        Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-                    ) {
-                        Text(p.name)
-                        IconButton(onClick = { players = players - p }) {
-                            Icon(Icons.Default.Close, contentDescription = "Quitar")
-                        }
-                    }
-                    Divider()
+                    PlayerRow(player = p, onRemove = { players = players - p })
                 }
             }
 
             Button(
                 onClick = { onStart(players) },
                 enabled = players.size >= 4,
-                modifier = Modifier.fillMaxWidth()
+                shape = RoundedCornerShape(50),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ),
+                modifier = Modifier.fillMaxWidth().height(52.dp)
             ) {
-                Text("Generar primera ronda")
+                Text("Generar primera ronda", fontWeight = FontWeight.SemiBold)
+            }
+        }
+    }
+}
+
+@Composable
+private fun PlayerRow(player: Player, onRemove: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primaryContainer),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        player.name.take(1).uppercase(),
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+                Spacer(Modifier.width(12.dp))
+                Text(player.name, style = MaterialTheme.typography.bodyLarge)
+            }
+            IconButton(onClick = onRemove) {
+                Icon(Icons.Default.Close, contentDescription = "Quitar", tint = MaterialTheme.colorScheme.error)
             }
         }
     }

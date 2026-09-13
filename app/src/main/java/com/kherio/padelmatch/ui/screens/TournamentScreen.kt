@@ -1,16 +1,27 @@
 package com.kherio.padelmatch.ui.screens
 
 import android.content.Intent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.NavigateNext
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.kherio.padelmatch.data.*
 import kotlinx.coroutines.launch
@@ -77,24 +88,44 @@ fun TournamentScreen(
     }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text(t.name) }) }
+        topBar = {
+            TopAppBar(
+                title = { Text(t.name, fontWeight = FontWeight.Bold) },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
+            )
+        }
     ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding)) {
-            TabRow(selectedTabIndex = tab) {
-                Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Ronda actual") })
-                Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Clasificación") })
-            }
+        Column(
+            Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .padding(padding)
+        ) {
+            SegmentedTabs(
+                selected = tab,
+                onSelect = { tab = it },
+                labels = listOf("Ronda actual", "Clasificación")
+            )
 
             if (tab == 0) {
                 val currentRound = t.rounds.lastOrNull()
                 if (currentRound == null) {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Generando ronda...") }
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    }
                 } else {
                     LazyColumn(
-                        Modifier.weight(1f).padding(16.dp),
+                        Modifier.weight(1f).padding(horizontal = 16.dp),
+                        contentPadding = PaddingValues(vertical = 12.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        item { Text("Ronda ${currentRound.number}", fontWeight = FontWeight.Bold) }
+                        item {
+                            Text(
+                                "Ronda ${currentRound.number}",
+                                style = MaterialTheme.typography.titleLarge,
+                                color = MaterialTheme.colorScheme.onBackground
+                            )
+                        }
                         items(currentRound.matches, key = { it.id }) { match ->
                             MatchCard(match, t.players) { s1, s2 -> updateScore(match, s1, s2) }
                         }
@@ -103,40 +134,105 @@ fun TournamentScreen(
                                 val names = currentRound.sittingOutPlayerIds
                                     .mapNotNull { id -> t.players.find { it.id == id }?.name }
                                     .joinToString(", ")
-                                Text("Descansan: $names", style = MaterialTheme.typography.bodySmall)
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = MaterialTheme.colorScheme.surfaceVariant
+                                ) {
+                                    Text(
+                                        "Descansan: $names",
+                                        modifier = Modifier.padding(12.dp),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
                         }
+                        item { Spacer(Modifier.height(8.dp)) }
                     }
-                    Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(onClick = { shareStandings() }, modifier = Modifier.weight(1f)) {
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.surface)
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = { shareStandings() },
+                            shape = RoundedCornerShape(50),
+                            modifier = Modifier.weight(1f).height(50.dp)
+                        ) {
+                            Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
                             Text("Compartir")
                         }
                         Button(
                             onClick = { finishRoundAndGenerateNext() },
                             enabled = currentRound.matches.all { it.isFinished },
-                            modifier = Modifier.weight(1f)
+                            shape = RoundedCornerShape(50),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary
+                            ),
+                            modifier = Modifier.weight(1f).height(50.dp)
                         ) {
-                            Text("Siguiente ronda")
+                            Text("Siguiente ronda", fontWeight = FontWeight.SemiBold)
+                            Spacer(Modifier.width(4.dp))
+                            Icon(Icons.Default.NavigateNext, contentDescription = null, modifier = Modifier.size(18.dp))
                         }
                     }
                 }
             } else {
                 val ranking = t.players.sortedByDescending { it.totalPoints }
-                LazyColumn(Modifier.fillMaxSize().padding(16.dp)) {
+                LazyColumn(
+                    Modifier.fillMaxSize().padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     itemsIndexed(ranking) { index, p ->
-                        Row(
-                            Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("${index + 1}. ${p.name}")
-                            Text("${p.totalPoints} pts · ${p.gamesPlayed} PJ")
-                        }
-                        Divider()
+                        RankingRow(position = index + 1, player = p)
                     }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun SegmentedTabs(selected: Int, onSelect: (Int) -> Unit, labels: List<String>) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+            .clip(RoundedCornerShape(50))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(4.dp)
+    ) {
+        labels.forEachIndexed { index, label ->
+            val isSelected = index == selected
+            Box(
+                Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(50))
+                    .background(if (isSelected) MaterialTheme.colorScheme.primary else androidx.compose.ui.graphics.Color.Transparent)
+                    .clickableNoRipple { onSelect(index) }
+                    .padding(vertical = 10.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    label,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+private fun Modifier.clickableNoRipple(onClick: () -> Unit): Modifier = composed {
+    clickable(
+        interactionSource = remember { MutableInteractionSource() },
+        indication = null,
+        onClick = onClick
+    )
 }
 
 private fun generateFirstRound(t: Tournament): Tournament? {
@@ -152,31 +248,144 @@ private fun MatchCard(match: MatchResult, players: List<Player>, onScoreChange: 
     var s1 by remember(match.id) { mutableStateOf(match.score1?.toString() ?: "") }
     var s2 by remember(match.id) { mutableStateOf(match.score2?.toString() ?: "") }
 
-    Card(Modifier.fillMaxWidth()) {
+    val team1Winning = (s1.toIntOrNull() ?: -1) > (s2.toIntOrNull() ?: -1)
+    val team2Winning = (s2.toIntOrNull() ?: -1) > (s1.toIntOrNull() ?: -1)
+
+    Card(
+        Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
         Column(Modifier.padding(16.dp)) {
-            Text("Pista ${match.court}", style = MaterialTheme.typography.labelMedium)
-            Spacer(Modifier.height(8.dp))
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("${nameOf(match.team1.player1Id)} / ${nameOf(match.team1.player2Id)}", Modifier.weight(1f))
-                OutlinedTextField(
-                    value = s1,
-                    onValueChange = { s1 = it.filter { c -> c.isDigit() }; onScoreChange(s1.toIntOrNull(), s2.toIntOrNull()) },
-                    modifier = Modifier.width(64.dp),
-                    singleLine = true
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    shape = RoundedCornerShape(50),
+                    color = MaterialTheme.colorScheme.secondaryContainer
+                ) {
+                    Text(
+                        "Pista ${match.court}",
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TeamNames(
+                    name1 = nameOf(match.team1.player1Id),
+                    name2 = nameOf(match.team1.player2Id),
+                    highlighted = team1Winning,
+                    modifier = Modifier.weight(1f)
+                )
+                ScoreField(value = s1, highlighted = team1Winning) {
+                    s1 = it; onScoreChange(s1.toIntOrNull(), s2.toIntOrNull())
+                }
+            }
+
+            Row(
+                Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    "VS",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.outline,
+                    fontWeight = FontWeight.Bold
                 )
             }
-            Spacer(Modifier.height(4.dp))
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("${nameOf(match.team2.player1Id)} / ${nameOf(match.team2.player2Id)}", Modifier.weight(1f))
-                OutlinedTextField(
-                    value = s2,
-                    onValueChange = { s2 = it.filter { c -> c.isDigit() }; onScoreChange(s1.toIntOrNull(), s2.toIntOrNull()) },
-                    modifier = Modifier.width(64.dp),
-                    singleLine = true
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TeamNames(
+                    name1 = nameOf(match.team2.player1Id),
+                    name2 = nameOf(match.team2.player2Id),
+                    highlighted = team2Winning,
+                    modifier = Modifier.weight(1f)
                 )
+                ScoreField(value = s2, highlighted = team2Winning) {
+                    s2 = it; onScoreChange(s1.toIntOrNull(), s2.toIntOrNull())
+                }
             }
         }
     }
 }
 
+@Composable
+private fun TeamNames(name1: String, name2: String, highlighted: Boolean, modifier: Modifier = Modifier) {
+    Column(modifier) {
+        Text(
+            "$name1 / $name2",
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = if (highlighted) FontWeight.Bold else FontWeight.Normal,
+            color = if (highlighted) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurface
+        )
+    }
+}
 
+@Composable
+private fun ScoreField(value: String, highlighted: Boolean, onChange: (String) -> Unit) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = { onChange(it.filter { c -> c.isDigit() }.take(2)) },
+        modifier = Modifier.width(68.dp),
+        singleLine = true,
+        textStyle = androidx.compose.ui.text.TextStyle(
+            textAlign = TextAlign.Center,
+            fontWeight = FontWeight.Bold
+        ),
+        shape = RoundedCornerShape(12.dp),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            unfocusedBorderColor = if (highlighted) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outline
+        )
+    )
+}
+
+@Composable
+private fun RankingRow(position: Int, player: Player) {
+    val medalColor = when (position) {
+        1 -> androidx.compose.ui.graphics.Color(0xFFFFD700)
+        2 -> androidx.compose.ui.graphics.Color(0xFFC0C0C0)
+        3 -> androidx.compose.ui.graphics.Color(0xFFCD7F32)
+        else -> MaterialTheme.colorScheme.surfaceVariant
+    }
+    val medalTextColor = if (position <= 3) androidx.compose.ui.graphics.Color.Black else MaterialTheme.colorScheme.onSurfaceVariant
+
+    Card(
+        Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (position <= 3) 3.dp else 1.dp)
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(medalColor),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (position <= 3) {
+                        Icon(Icons.Default.EmojiEvents, contentDescription = null, tint = medalTextColor, modifier = Modifier.size(18.dp))
+                    } else {
+                        Text("$position", fontWeight = FontWeight.Bold, color = medalTextColor, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+                Spacer(Modifier.width(12.dp))
+                Text(player.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                Text("${player.totalPoints} pts", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                Text("${player.gamesPlayed} PJ", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}

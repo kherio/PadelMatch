@@ -2,27 +2,71 @@ package com.kherio.padelmatch.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 
-private val PadelGreen = Color(0xFFC9A227) // dorado, a juego con el logo del club
-private val PadelLime = Color(0xFF1A1A1A) // negro del escudo
+// Paleta del club: dorado + negro + verde pista como acento secundario
+val Gold = Color(0xFFC9A227)
+val GoldLight = Color(0xFFE8C55A)
+val GoldDark = Color(0xFF8F7112)
+val AlmostBlack = Color(0xFF141414)
+val CourtGreen = Color(0xFF1E8E5A)
 
 private val LightColors = lightColorScheme(
-    primary = PadelGreen,
-    secondary = PadelLime,
-    surface = Color(0xFFFAFAFA)
+    primary = GoldDark,
+    onPrimary = Color.White,
+    primaryContainer = Color(0xFFFFE8A3),
+    onPrimaryContainer = Color(0xFF3D2E00),
+    secondary = CourtGreen,
+    onSecondary = Color.White,
+    secondaryContainer = Color(0xFFC6F0D8),
+    onSecondaryContainer = Color(0xFF00391D),
+    background = Color(0xFFFFFBF2),
+    onBackground = AlmostBlack,
+    surface = Color(0xFFFFFFFF),
+    onSurface = AlmostBlack,
+    surfaceVariant = Color(0xFFF0E6C8),
+    onSurfaceVariant = Color(0xFF4A4330),
+    error = Color(0xFFBA1A1A),
+    onError = Color.White,
+    outline = Color(0xFF8F8570)
 )
 
 private val DarkColors = darkColorScheme(
-    primary = PadelLime,
-    secondary = PadelGreen
+    primary = GoldLight,
+    onPrimary = Color(0xFF3D2E00),
+    primaryContainer = GoldDark,
+    onPrimaryContainer = Color(0xFFFFE8A3),
+    secondary = Color(0xFF7BD9A5),
+    onSecondary = Color(0xFF00391D),
+    secondaryContainer = Color(0xFF00522B),
+    onSecondaryContainer = Color(0xFFC6F0D8),
+    background = AlmostBlack,
+    onBackground = Color(0xFFF2EFE6),
+    surface = Color(0xFF1F1F1F),
+    onSurface = Color(0xFFF2EFE6),
+    surfaceVariant = Color(0xFF2C2A22),
+    onSurfaceVariant = Color(0xFFD6CDB0),
+    error = Color(0xFFFFB4AB),
+    onError = Color(0xFF690005),
+    outline = Color(0xFF9A9280)
+)
+
+private val AppTypography = Typography(
+    headlineSmall = TextStyle(fontWeight = FontWeight.Bold, fontSize = 24.sp),
+    titleLarge = TextStyle(fontWeight = FontWeight.Bold, fontSize = 20.sp),
+    titleMedium = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 17.sp),
+    bodyLarge = TextStyle(fontSize = 16.sp)
 )
 
 @Composable
 fun PadelMatchTheme(content: @Composable () -> Unit) {
     val colors = if (isSystemInDarkTheme()) DarkColors else LightColors
-    MaterialTheme(colorScheme = colors, content = content)
+    MaterialTheme(colorScheme = colors, typography = AppTypography, content = content)
 }
