@@ -24,6 +24,7 @@ import com.kherio.padelmatch.data.TournamentRepository
 import com.kherio.padelmatch.ui.screens.CreateTournamentScreen
 import com.kherio.padelmatch.ui.screens.HomeScreen
 import com.kherio.padelmatch.ui.screens.PlayersScreen
+import com.kherio.padelmatch.ui.screens.PodiumScreen
 import com.kherio.padelmatch.ui.screens.SplashScreen
 import com.kherio.padelmatch.ui.screens.TournamentScreen
 import com.kherio.padelmatch.ui.theme.PadelMatchTheme
@@ -114,7 +115,27 @@ private fun AppNavHost(repository: TournamentRepository) {
             TournamentScreen(
                 tournamentId = id,
                 repository = repository,
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onTournamentFinished = { finishedId ->
+                    navController.navigate("podium/$finishedId") {
+                        popUpTo("home")
+                    }
+                }
+            )
+        }
+        composable(
+            "podium/{id}",
+            arguments = listOf(navArgument("id") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val id = backStackEntry.arguments?.getString("id") ?: return@composable
+            PodiumScreen(
+                tournamentId = id,
+                repository = repository,
+                onBackToHome = {
+                    navController.navigate("home") {
+                        popUpTo("home") { inclusive = true }
+                    }
+                }
             )
         }
     }

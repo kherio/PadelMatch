@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.SportsTennis
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -171,21 +172,33 @@ private fun TournamentCard(tournament: Tournament, onClick: () -> Unit, onDelete
                     Modifier
                         .size(48.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(formatColor),
+                        .background(if (tournament.isFinished) MaterialTheme.colorScheme.surfaceVariant else formatColor),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.SportsTennis, contentDescription = null, tint = formatTextColor)
+                    Icon(
+                        if (tournament.isFinished) Icons.Default.EmojiEvents else Icons.Default.SportsTennis,
+                        contentDescription = null,
+                        tint = if (tournament.isFinished) MaterialTheme.colorScheme.onSurfaceVariant else formatTextColor
+                    )
                 }
                 Spacer(Modifier.width(12.dp))
                 Column {
                     Text(tournament.name, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(2.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        AssistChip(
-                            label = tournament.format.name.lowercase().replaceFirstChar { it.uppercase() },
-                            color = formatColor,
-                            textColor = formatTextColor
-                        )
+                        if (tournament.isFinished) {
+                            AssistChip(
+                                label = "Finalizado",
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                textColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        } else {
+                            AssistChip(
+                                label = tournament.format.name.lowercase().replaceFirstChar { it.uppercase() },
+                                color = formatColor,
+                                textColor = formatTextColor
+                            )
+                        }
                         Spacer(Modifier.width(6.dp))
                         Text(
                             "${tournament.players.size} jug. · Ronda ${tournament.rounds.size}",

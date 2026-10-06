@@ -43,12 +43,14 @@ import kotlinx.coroutines.launch
 fun TournamentScreen(
     tournamentId: String,
     repository: TournamentRepository,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onTournamentFinished: (String) -> Unit
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     var tournament by remember { mutableStateOf<Tournament?>(null) }
     var tab by remember { mutableStateOf(0) } // 0 = ronda actual, 1 = clasificación
+    var showFinishDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(tournamentId) {
         tournament = repository.getById(tournamentId)
@@ -99,10 +101,37 @@ fun TournamentScreen(
         context.startActivity(Intent.createChooser(intent, "Compartir clasificación"))
     }
 
+    if (showFinishDialog) {
+        AlertDialog(
+            onDismissRequest = { showFinishDialog = false },
+            icon = { Icon(Icons.Default.EmojiEvents, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+            title = { Text("¿Finalizar torneo?") },
+            text = { Text("Se cerrará la clasificación actual y se mostrará el podio final. Podrás seguir viendo los resultados después.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showFinishDialog = false
+                    onTournamentFinished(t.id)
+                }) { Text("Finalizar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showFinishDialog = false }) { Text("Cancelar") }
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(t.name, fontWeight = FontWeight.Bold) },
+                actions = {
+                    IconButton(onClick = { showFinishDialog = true }) {
+                        Icon(
+                            Icons.Default.EmojiEvents,
+                            contentDescription = "Finalizar torneo",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
             )
         }
