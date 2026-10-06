@@ -27,6 +27,7 @@ import com.kherio.padelmatch.ui.screens.PlayersScreen
 import com.kherio.padelmatch.ui.screens.PodiumScreen
 import com.kherio.padelmatch.ui.screens.SplashScreen
 import com.kherio.padelmatch.ui.screens.TournamentScreen
+import com.kherio.padelmatch.ui.screens.UpdatesScreen
 import com.kherio.padelmatch.ui.theme.PadelMatchTheme
 import kotlinx.coroutines.launch
 
@@ -52,7 +53,6 @@ private fun AppNavHost(repository: TournamentRepository) {
     val navController = rememberNavController()
     val scope = rememberCoroutineScope()
 
-    // Estado temporal mientras se crea un torneo nuevo (nombre/formato/pistas -> jugadores)
     var pendingName by remember { mutableStateOf("") }
     var pendingFormat by remember { mutableStateOf(TournamentFormat.AMERICANO) }
     var pendingCourts by remember { mutableStateOf(2) }
@@ -68,13 +68,22 @@ private fun AppNavHost(repository: TournamentRepository) {
                 }
             )
         }
+
         composable("home") {
             HomeScreen(
                 repository = repository,
                 onOpenTournament = { id -> navController.navigate("tournament/$id") },
-                onCreateNew = { navController.navigate("create") }
+                onCreateNew = { navController.navigate("create") },
+                onOpenUpdates = { navController.navigate("updates") }
             )
         }
+
+        composable("updates") {
+            UpdatesScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+
         composable("create") {
             CreateTournamentScreen(
                 onBack = { navController.popBackStack() },
@@ -87,6 +96,7 @@ private fun AppNavHost(repository: TournamentRepository) {
                 }
             )
         }
+
         composable("players") {
             PlayersScreen(
                 onBack = { navController.popBackStack() },
@@ -107,6 +117,7 @@ private fun AppNavHost(repository: TournamentRepository) {
                 }
             )
         }
+
         composable(
             "tournament/{id}",
             arguments = listOf(navArgument("id") { type = NavType.StringType })
@@ -123,6 +134,7 @@ private fun AppNavHost(repository: TournamentRepository) {
                 }
             )
         }
+
         composable(
             "podium/{id}",
             arguments = listOf(navArgument("id") { type = NavType.StringType })
