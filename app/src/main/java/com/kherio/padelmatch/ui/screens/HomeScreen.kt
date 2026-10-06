@@ -11,12 +11,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.SportsTennis
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -32,10 +34,12 @@ import kotlinx.coroutines.launch
 fun HomeScreen(
     repository: TournamentRepository,
     onOpenTournament: (String) -> Unit,
-    onCreateNew: () -> Unit
+    onCreateNew: () -> Unit,
+    onOpenUpdates: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
     var tournaments by remember { mutableStateOf<List<Tournament>>(emptyList()) }
+    var menuExpanded by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         tournaments = repository.getAll()
@@ -57,6 +61,35 @@ fun HomeScreen(
                         Column {
                             Text("Artaza Torresolo", fontWeight = FontWeight.Bold)
                             Text("Pádel Club", style = MaterialTheme.typography.labelMedium)
+                        }
+                    }
+                },
+                actions = {
+                    Box {
+                        IconButton(onClick = { menuExpanded = true }) {
+                            Icon(
+                                Icons.Default.MoreVert,
+                                contentDescription = "Menú"
+                            )
+                        }
+
+                        DropdownMenu(
+                            expanded = menuExpanded,
+                            onDismissRequest = { menuExpanded = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Actualizaciones") },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.SystemUpdate,
+                                        contentDescription = null
+                                    )
+                                },
+                                onClick = {
+                                    menuExpanded = false
+                                    onOpenUpdates()
+                                }
+                            )
                         }
                     }
                 },
@@ -142,14 +175,18 @@ fun HomeScreen(
                         }
                     )
                 }
-                item { Spacer(Modifier.height(72.dp)) } // hueco para que el FAB no tape la última tarjeta
+                item { Spacer(Modifier.height(72.dp)) }
             }
         }
     }
 }
 
 @Composable
-private fun TournamentCard(tournament: Tournament, onClick: () -> Unit, onDelete: () -> Unit) {
+private fun TournamentCard(
+    tournament: Tournament,
+    onClick: () -> Unit,
+    onDelete: () -> Unit
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -172,18 +209,32 @@ private fun TournamentCard(tournament: Tournament, onClick: () -> Unit, onDelete
                     Modifier
                         .size(48.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(if (tournament.isFinished) MaterialTheme.colorScheme.surfaceVariant else formatColor),
+                        .background(
+                            if (tournament.isFinished) {
+                                MaterialTheme.colorScheme.surfaceVariant
+                            } else {
+                                formatColor
+                            }
+                        ),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         if (tournament.isFinished) Icons.Default.EmojiEvents else Icons.Default.SportsTennis,
                         contentDescription = null,
-                        tint = if (tournament.isFinished) MaterialTheme.colorScheme.onSurfaceVariant else formatTextColor
+                        tint = if (tournament.isFinished) {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        } else {
+                            formatTextColor
+                        }
                     )
                 }
                 Spacer(Modifier.width(12.dp))
                 Column {
-                    Text(tournament.name, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        tournament.name,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleMedium
+                    )
                     Spacer(Modifier.height(2.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (tournament.isFinished) {
@@ -194,7 +245,8 @@ private fun TournamentCard(tournament: Tournament, onClick: () -> Unit, onDelete
                             )
                         } else {
                             AssistChip(
-                                label = tournament.format.name.lowercase().replaceFirstChar { it.uppercase() },
+                                label = tournament.format.name.lowercase()
+                                    .replaceFirstChar { it.uppercase() },
                                 color = formatColor,
                                 textColor = formatTextColor
                             )
@@ -208,6 +260,7 @@ private fun TournamentCard(tournament: Tournament, onClick: () -> Unit, onDelete
                     }
                 }
             }
+
             IconButton(onClick = onDelete) {
                 Icon(
                     Icons.Default.DeleteOutline,
@@ -220,13 +273,22 @@ private fun TournamentCard(tournament: Tournament, onClick: () -> Unit, onDelete
 }
 
 @Composable
-private fun AssistChip(label: String, color: Color, textColor: Color) {
+private fun AssistChip(
+    label: String,
+    color: Color,
+    textColor: Color
+) {
     Box(
         Modifier
             .clip(RoundedCornerShape(50))
             .background(color)
             .padding(horizontal = 8.dp, vertical = 2.dp)
     ) {
-        Text(label, style = MaterialTheme.typography.labelSmall, color = textColor, fontWeight = FontWeight.SemiBold)
+        Text(
+            label,
+            style = MaterialTheme.typography.labelSmall,
+            color = textColor,
+            fontWeight = FontWeight.SemiBold
+        )
     }
 }
