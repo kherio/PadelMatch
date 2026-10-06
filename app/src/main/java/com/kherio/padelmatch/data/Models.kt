@@ -2,7 +2,11 @@ package com.kherio.padelmatch.data
 
 import java.util.UUID
 
-enum class TournamentFormat { AMERICANO, MEXICANO }
+enum class TournamentFormat {
+    AMERICANO,
+    AMERICANO_COMPETITIVO,
+    MEXICANO
+}
 
 data class Player(
     val id: String = UUID.randomUUID().toString(),
@@ -42,7 +46,7 @@ data class Tournament(
     val pointsTarget: Int = 21,
     var players: List<Player>,
     var rounds: List<TournamentRound> = emptyList(),
-    var pastPairHistory: Set<String> = emptySet(), // "id1|id2" pairs already used together (Americano)
+    var pastPairHistory: Set<String> = emptySet(), // "id1|id2" pairs already used together
     var isFinished: Boolean = false,
     val createdAt: Long = System.currentTimeMillis()
 )

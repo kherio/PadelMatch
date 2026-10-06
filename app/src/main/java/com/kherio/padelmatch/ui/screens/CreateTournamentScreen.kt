@@ -63,22 +63,30 @@ fun CreateTournamentScreen(
             Column {
                 Text("Formato", style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(10.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    FormatOptionCard(
-                        title = "Americano",
-                        subtitle = "Parejas rotativas cada ronda",
-                        selected = format == TournamentFormat.AMERICANO,
-                        modifier = Modifier.weight(1f),
-                        onClick = { format = TournamentFormat.AMERICANO }
-                    )
-                    FormatOptionCard(
-                        title = "Mexicano",
-                        subtitle = "Parejas por clasificación",
-                        selected = format == TournamentFormat.MEXICANO,
-                        modifier = Modifier.weight(1f),
-                        onClick = { format = TournamentFormat.MEXICANO }
-                    )
-                }
+
+                FormatOptionCard(
+                    title = "Americano",
+                    subtitle = "Parejas rotativas cada ronda",
+                    selected = format == TournamentFormat.AMERICANO,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = { format = TournamentFormat.AMERICANO }
+                )
+                Spacer(Modifier.height(10.dp))
+                FormatOptionCard(
+                    title = "Americano competitivo",
+                    subtitle = "Desde la ronda 2, las parejas se generan según la clasificación",
+                    selected = format == TournamentFormat.AMERICANO_COMPETITIVO,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = { format = TournamentFormat.AMERICANO_COMPETITIVO }
+                )
+                Spacer(Modifier.height(10.dp))
+                FormatOptionCard(
+                    title = "Mexicano",
+                    subtitle = "Parejas por clasificación",
+                    selected = format == TournamentFormat.MEXICANO,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = { format = TournamentFormat.MEXICANO }
+                )
             }
 
             Column {
@@ -156,17 +164,17 @@ private fun PointsChip(points: Int, selected: Boolean, modifier: Modifier = Modi
         targetValue = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
         label = "pointsChipFg"
     )
-    val scale by animateDpAsState(
+    val borderWidth by animateDpAsState(
         targetValue = if (selected) 2.dp else 0.dp,
         animationSpec = spring(),
-        label = "pointsChipScale"
+        label = "pointsChipBorder"
     )
 
     Box(
         modifier
             .clip(RoundedCornerShape(14.dp))
             .background(containerColor)
-            .border(scale, MaterialTheme.colorScheme.primary, RoundedCornerShape(14.dp))
+            .border(borderWidth, MaterialTheme.colorScheme.primary, RoundedCornerShape(14.dp))
             .clickable(onClick = onClick)
             .padding(vertical = 14.dp),
         contentAlignment = Alignment.Center
@@ -192,18 +200,19 @@ private fun FormatOptionCard(
     val borderWidth by animateDpAsState(targetValue = if (selected) 2.dp else 1.dp, label = "formatCardBorder")
 
     Card(
-        modifier = modifier
-            .border(borderWidth, borderColor, RoundedCornerShape(16.dp)),
+        modifier = modifier.border(borderWidth, borderColor, RoundedCornerShape(16.dp)),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = containerColor),
         onClick = onClick
     ) {
-        Column(Modifier.padding(16.dp)) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.SportsTennis, contentDescription = null, tint = contentColor)
-            Spacer(Modifier.height(8.dp))
-            Text(title, fontWeight = FontWeight.Bold, color = contentColor)
-            Spacer(Modifier.height(2.dp))
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = contentColor)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(title, fontWeight = FontWeight.Bold, color = contentColor)
+                Spacer(Modifier.height(2.dp))
+                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = contentColor)
+            }
         }
     }
 }
