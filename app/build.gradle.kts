@@ -17,10 +17,30 @@ android {
         versionName = "1.1"
     }
 
+    // Firma de la release: solo se activa si existen las variables de entorno
+    // KEYSTORE_PATH / KEYSTORE_PASSWORD / KEY_ALIAS / KEY_PASSWORD (las inyecta
+    // el workflow de CI a partir de los secrets del repo). En local, si no están
+    // definidas, el release se queda sin firmar como hasta ahora.
+    signingConfigs {
+        create("release") {
+            val storePath = System.getenv("KEYSTORE_PATH")
+            if (storePath != null) {
+                storeFile = file(storePath)
+                storePassword = System.getenv("KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("KEY_ALIAS")
+                keyPassword = System.getenv("KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            val releaseSigning = signingConfigs.getByName("release")
+            if (releaseSigning.storeFile != null) {
+                signingConfig = releaseSigning
+            }
         }
     }
 
