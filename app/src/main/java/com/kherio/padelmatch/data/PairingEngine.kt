@@ -152,6 +152,33 @@ object PairingEngine {
         return team1 to team2
     }
 
+    /**
+     * Solo para AMERICANO / AMERICANO_COMPETITIVO: indica si, una vez jugada
+     * la ronda indicada, ya se habrán agotado todas las combinaciones de
+     * pareja posibles entre los jugadores del torneo (cada jugador ha sido
+     * compañero de todos los demás al menos una vez). Con N jugadores hay
+     * N*(N-1)/2 parejas distintas posibles; en un torneo de 4 jugadores y
+     * 1 pista son exactamente 3 rondas (AB/CD, AC/BD, AD/BC), no más.
+     *
+     * Es una condición necesaria y, en la práctica (grupos de 4 sin huecos),
+     * también suficiente para que todos hayan sido además RIVALES de todos:
+     * en un grupo de 4, quien no es tu pareja en una ronda es forzosamente
+     * tu rival esa misma ronda.
+     */
+    fun isRoundRobinComplete(tournament: Tournament, round: TournamentRound): Boolean {
+        if (tournament.format == TournamentFormat.MEXICANO) return false
+        val n = tournament.players.size
+        if (n < 4) return false
+        val totalPossiblePairs = n * (n - 1) / 2
+        val projectedHistory = tournament.pastPairHistory + round.matches.flatMap {
+            listOf(
+                pairKey(it.team1.player1Id, it.team1.player2Id),
+                pairKey(it.team2.player1Id, it.team2.player2Id)
+            )
+        }
+        return projectedHistory.size >= totalPossiblePairs
+    }
+
     /** Aplica un resultado de partido: suma puntos y partidos jugados a los 4 jugadores. */
     fun applyResult(tournament: Tournament, match: MatchResult): Tournament {
         val score1 = match.score1 ?: return tournament
