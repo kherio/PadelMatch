@@ -1,5 +1,7 @@
 <resources>
-    <style name="Theme.PadelMatch" parent="android:Theme.Material.Light.NoActionBar">
-        <item name="android:windowBackground">#141414</item>
+    <style name="Theme.PadelMatch" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#0E0C0A</item>
+        <item name="android:statusBarColor">#0E0C0A</item>
+        <item name="android:navigationBarColor">#0E0C0A</item>
     </style>
 </resources>

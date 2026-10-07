@@ -90,7 +90,7 @@ fun PodiumScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Image(
-                painter = painterResource(id = R.drawable.logo_artaza),
+                painter = painterResource(id = R.drawable.logo_emblem),
                 contentDescription = null,
                 modifier = Modifier.size(64.dp)
             )

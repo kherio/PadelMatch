@@ -3,6 +3,12 @@ package com.kherio.padelmatch
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -12,6 +18,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -43,8 +52,16 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             PadelMatchTheme {
-                Surface(modifier = Modifier.fillMaxSize()) {
-                    AppNavHost(repository, rosterRepository)
+                Box(Modifier.fillMaxSize()) {
+                    Image(
+                        painter = painterResource(id = R.drawable.bg_slate),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                    Surface(modifier = Modifier.fillMaxSize(), color = Color.Transparent) {
+                        AppNavHost(repository, rosterRepository)
+                    }
                 }
             }
         }
@@ -61,8 +78,17 @@ private fun AppNavHost(repository: TournamentRepository, rosterRepository: Playe
     var pendingCourts by remember { mutableStateOf(2) }
     var pendingPointsTarget by remember { mutableStateOf(21) }
 
-    NavHost(navController = navController, startDestination = "splash") {
-        composable("splash") {
+    // Las pantallas tienen fondo transparente (se ve la textura): sin transiciones
+    // entre pantallas para que no se solapen dos pantallas a la vez.
+    NavHost(
+        navController = navController,
+        startDestination = "splash",
+        enterTransition = { EnterTransition.None },
+        exitTransition = { ExitTransition.None },
+        popEnterTransition = { EnterTransition.None },
+        popExitTransition = { ExitTransition.None }
+    ) {
+        composable("splash", exitTransition = { fadeOut(tween(300)) }) {
             SplashScreen(
                 onFinished = {
                     navController.navigate("home") {

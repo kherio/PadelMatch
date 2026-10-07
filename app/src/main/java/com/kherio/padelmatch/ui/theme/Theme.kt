@@ -1,10 +1,8 @@
 package com.kherio.padelmatch.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
@@ -18,26 +16,6 @@ val GoldDark = Color(0xFF8F7112)
 val AlmostBlack = Color(0xFF141414)
 val CourtGreen = Color(0xFF1E8E5A)
 
-private val LightColors = lightColorScheme(
-    primary = GoldDark,
-    onPrimary = Color.White,
-    primaryContainer = Color(0xFFFFE8A3),
-    onPrimaryContainer = Color(0xFF3D2E00),
-    secondary = CourtGreen,
-    onSecondary = Color.White,
-    secondaryContainer = Color(0xFFC6F0D8),
-    onSecondaryContainer = Color(0xFF00391D),
-    background = Color(0xFFFFFBF2),
-    onBackground = AlmostBlack,
-    surface = Color(0xFFFFFFFF),
-    onSurface = AlmostBlack,
-    surfaceVariant = Color(0xFFF0E6C8),
-    onSurfaceVariant = Color(0xFF4A4330),
-    error = Color(0xFFBA1A1A),
-    onError = Color.White,
-    outline = Color(0xFF8F8570)
-)
-
 private val DarkColors = darkColorScheme(
     primary = GoldLight,
     onPrimary = Color(0xFF3D2E00),
@@ -47,7 +25,8 @@ private val DarkColors = darkColorScheme(
     onSecondary = Color(0xFF00391D),
     secondaryContainer = Color(0xFF00522B),
     onSecondaryContainer = Color(0xFFC6F0D8),
-    background = AlmostBlack,
+    // Transparente: deja ver la textura de fondo que dibuja MainActivity
+    background = Color.Transparent,
     onBackground = Color(0xFFF2EFE6),
     surface = Color(0xFF1F1F1F),
     onSurface = Color(0xFFF2EFE6),
@@ -67,6 +46,6 @@ private val AppTypography = Typography(
 
 @Composable
 fun PadelMatchTheme(content: @Composable () -> Unit) {
-    val colors = if (isSystemInDarkTheme()) DarkColors else LightColors
-    MaterialTheme(colorScheme = colors, typography = AppTypography, content = content)
+    // La identidad del club (negro + dorado) es oscura: la app usa siempre el tema oscuro.
+    MaterialTheme(colorScheme = DarkColors, typography = AppTypography, content = content)
 }

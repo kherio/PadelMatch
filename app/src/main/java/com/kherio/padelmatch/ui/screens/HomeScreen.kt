@@ -51,7 +51,7 @@ fun HomeScreen(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Image(
-                            painter = painterResource(id = R.drawable.logo_artaza),
+                            painter = painterResource(id = R.drawable.logo_emblem),
                             contentDescription = "Artaza Torresolo Pádel Club",
                             modifier = Modifier
                                 .size(40.dp)
