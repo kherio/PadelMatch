@@ -163,6 +163,7 @@ fun TournamentScreen(
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
                 .padding(padding)
+                .imePadding()
         ) {
             SegmentedTabs(
                 selected = tab,

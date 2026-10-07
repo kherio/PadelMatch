@@ -13,8 +13,10 @@ android {
         applicationId = "com.kherio.padelmatch"
         minSdk = 24
         targetSdk = 34
-        versionCode = 2
-        versionName = "1.1"
+        // En CI la versión la calcula el workflow (1.2, 1.3, ...) y llega por
+        // VERSION_NAME / VERSION_CODE; en local se usan estos valores por defecto.
+        versionCode = System.getenv("VERSION_CODE")?.toIntOrNull() ?: 2
+        versionName = System.getenv("VERSION_NAME") ?: "1.1"
     }
 
     // Firma de la release: solo se activa si existen las variables de entorno

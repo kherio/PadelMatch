@@ -18,6 +18,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: release-build
+  cancel-in-progress: false
+
 jobs:
   build:
     name: Build Release APK
@@ -39,6 +43,21 @@ jobs:
       - name: Make Gradle wrapper executable
         run: chmod +x ./gradlew
 
+      - name: Calcular la versión automáticamente
+        id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          # Cada release sube el número menor: 1.1 -> 1.2 -> 1.3 ...
+          # Para pasar a 2.0 basta con cambiar MAJOR a 2.
+          MAJOR=1
+          LAST=$(gh release list --repo "$GITHUB_REPOSITORY" --limit 200 --json tagName --jq '.[].tagName' \
+            | sed -n "s/^v\{0,1\}${MAJOR}\.\([0-9]\{1,\}\)$/\1/p" | sort -n | tail -n 1)
+          MINOR=$(( ${LAST:-0} + 1 ))
+          echo "version_name=${MAJOR}.${MINOR}" >> "$GITHUB_OUTPUT"
+          echo "version_code=$(( MAJOR * 1000 + MINOR ))" >> "$GITHUB_OUTPUT"
+
       - name: Decode signing keystore
         run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > "${{ runner.temp }}/release.keystore"
 
@@ -48,16 +67,9 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          VERSION_NAME: ${{ steps.version.outputs.version_name }}
+          VERSION_CODE: ${{ steps.version.outputs.version_code }}
         run: ./gradlew :app:assembleRelease --no-daemon
-
-      - name: Read app version
-        id: version
-        shell: bash
-        run: |
-          VERSION_NAME=$(sed -n 's/^[[:space:]]*versionName[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' app/build.gradle.kts | head -n 1)
-          VERSION_CODE=$(sed -n 's/^[[:space:]]*versionCode[[:space:]]*=[[:space:]]*\([0-9]*\).*/\1/p' app/build.gradle.kts | head -n 1)
-          echo "version_name=${VERSION_NAME:-unknown}" >> "$GITHUB_OUTPUT"
-          echo "version_code=${VERSION_CODE:-0}" >> "$GITHUB_OUTPUT"
 
       - name: Rename APK
         id: apk
