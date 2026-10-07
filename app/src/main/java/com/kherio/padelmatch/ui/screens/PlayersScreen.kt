@@ -6,7 +6,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -179,8 +179,9 @@ fun PlayersScreen(
             }
 
             LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(players, key = { it.id }) { p ->
+                itemsIndexed(players, key = { _, p -> p.id }) { index, p ->
                     PlayerRow(
+                        number = index + 1,
                         player = p,
                         onRemove = { players = players - p },
                         modifier = Modifier.animateItemPlacement()
@@ -205,7 +206,7 @@ fun PlayersScreen(
 }
 
 @Composable
-private fun PlayerRow(player: Player, onRemove: () -> Unit, modifier: Modifier = Modifier) {
+private fun PlayerRow(number: Int, player: Player, onRemove: () -> Unit, modifier: Modifier = Modifier) {
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
@@ -226,7 +227,7 @@ private fun PlayerRow(player: Player, onRemove: () -> Unit, modifier: Modifier =
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        player.name.take(1).uppercase(),
+                        "$number",
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
