@@ -89,6 +89,28 @@ fun TournamentScreen(
         persist(updated)
     }
 
+    /** Aplica los resultados pendientes de la ronda actual (por si aún no se
+     * ha pasado por "Siguiente ronda") antes de cerrar el torneo, para que
+     * ningún resultado puntuado se quede fuera de la clasificación final.
+     * Espera a que el guardado termine antes de navegar al podio, para que
+     * no se lea el dato antiguo por una carrera con el guardado asíncrono. */
+    fun applyPendingResultsAndFinish() {
+        var updated = t
+        val lastRound = t.rounds.lastOrNull()
+        if (lastRound != null) {
+            lastRound.matches.filter { it.isFinished }.forEach { m ->
+                updated = PairingEngine.applyResult(updated, m)
+            }
+        }
+        scope.launch {
+            if (updated != t) {
+                tournament = updated
+                repository.save(updated)
+            }
+            onTournamentFinished(t.id)
+        }
+    }
+
     fun shareStandings() {
         val ranking = t.players.sortedByDescending { it.totalPoints }
             .mapIndexed { i, p -> "${i + 1}. ${p.name} — ${p.totalPoints} pts" }
@@ -110,7 +132,7 @@ fun TournamentScreen(
             confirmButton = {
                 TextButton(onClick = {
                     showFinishDialog = false
-                    onTournamentFinished(t.id)
+                    applyPendingResultsAndFinish()
                 }) { Text("Finalizar") }
             },
             dismissButton = {
@@ -150,6 +172,7 @@ fun TournamentScreen(
 
             if (tab == 0) {
                 val currentRound = t.rounds.lastOrNull()
+                val roundRobinDone = currentRound?.let { PairingEngine.isRoundRobinComplete(t, it) } ?: false
                 if (currentRound == null) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
@@ -221,6 +244,29 @@ fun TournamentScreen(
                         }
                         item { Spacer(Modifier.height(8.dp)) }
                     }
+                    if (roundRobinDone) {
+                        AnimatedVisibility(visible = true, enter = fadeIn() + expandVertically()) {
+                            Surface(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.secondaryContainer
+                            ) {
+                                Row(
+                                    Modifier.padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Default.EmojiEvents, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(
+                                        "¡Todos han jugado con todos y contra todos! Ya puedes finalizar el torneo.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                                    )
+                                }
+                            }
+                        }
+                        Spacer(Modifier.height(8.dp))
+                    }
                     Row(
                         Modifier
                             .fillMaxWidth()
@@ -237,19 +283,35 @@ fun TournamentScreen(
                             Spacer(Modifier.width(6.dp))
                             Text("Compartir")
                         }
-                        Button(
-                            onClick = { finishRoundAndGenerateNext() },
-                            enabled = currentRound.matches.all { it.isFinished },
-                            shape = RoundedCornerShape(50),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary,
-                                contentColor = MaterialTheme.colorScheme.onPrimary
-                            ),
-                            modifier = Modifier.weight(1f).height(50.dp)
-                        ) {
-                            Text("Siguiente ronda", fontWeight = FontWeight.SemiBold)
-                            Spacer(Modifier.width(4.dp))
-                            Icon(Icons.Default.NavigateNext, contentDescription = null, modifier = Modifier.size(18.dp))
+                        if (roundRobinDone) {
+                            Button(
+                                onClick = { showFinishDialog = true },
+                                shape = RoundedCornerShape(50),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    contentColor = MaterialTheme.colorScheme.onPrimary
+                                ),
+                                modifier = Modifier.weight(1f).height(50.dp)
+                            ) {
+                                Icon(Icons.Default.EmojiEvents, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("Finalizar torneo", fontWeight = FontWeight.SemiBold)
+                            }
+                        } else {
+                            Button(
+                                onClick = { finishRoundAndGenerateNext() },
+                                enabled = currentRound.matches.all { it.isFinished },
+                                shape = RoundedCornerShape(50),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    contentColor = MaterialTheme.colorScheme.onPrimary
+                                ),
+                                modifier = Modifier.weight(1f).height(50.dp)
+                            ) {
+                                Text("Siguiente ronda", fontWeight = FontWeight.SemiBold)
+                                Spacer(Modifier.width(4.dp))
+                                Icon(Icons.Default.NavigateNext, contentDescription = null, modifier = Modifier.size(18.dp))
+                            }
                         }
                     }
                 }
