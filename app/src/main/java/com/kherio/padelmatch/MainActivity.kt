@@ -18,6 +18,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.kherio.padelmatch.data.Player
+import com.kherio.padelmatch.data.PlayerRosterRepository
 import com.kherio.padelmatch.data.Tournament
 import com.kherio.padelmatch.data.TournamentFormat
 import com.kherio.padelmatch.data.TournamentRepository
@@ -33,15 +34,17 @@ import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private lateinit var repository: TournamentRepository
+    private lateinit var rosterRepository: PlayerRosterRepository
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         repository = TournamentRepository(this)
+        rosterRepository = PlayerRosterRepository(this)
 
         setContent {
             PadelMatchTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    AppNavHost(repository)
+                    AppNavHost(repository, rosterRepository)
                 }
             }
         }
@@ -49,7 +52,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun AppNavHost(repository: TournamentRepository) {
+private fun AppNavHost(repository: TournamentRepository, rosterRepository: PlayerRosterRepository) {
     val navController = rememberNavController()
     val scope = rememberCoroutineScope()
 
@@ -99,6 +102,7 @@ private fun AppNavHost(repository: TournamentRepository) {
 
         composable("players") {
             PlayersScreen(
+                rosterRepository = rosterRepository,
                 onBack = { navController.popBackStack() },
                 onStart = { players: List<Player> ->
                     val tournament = Tournament(

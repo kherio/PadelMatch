@@ -2,12 +2,15 @@ package com.kherio.padelmatch.ui.screens
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.PersonAdd
@@ -19,15 +22,26 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.kherio.padelmatch.data.Player
+import com.kherio.padelmatch.data.PlayerRosterRepository
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 fun PlayersScreen(
     onBack: () -> Unit,
-    onStart: (List<Player>) -> Unit
+    onStart: (List<Player>) -> Unit,
+    rosterRepository: PlayerRosterRepository
 ) {
     var players by remember { mutableStateOf<List<Player>>(emptyList()) }
     var input by remember { mutableStateOf("") }
+    var roster by remember { mutableStateOf(rosterRepository.getAll()) }
+    var editRoster by remember { mutableStateOf(false) }
+
+    fun addPlayer(name: String) {
+        val clean = name.trim()
+        if (clean.isNotEmpty() && players.none { it.name.equals(clean, ignoreCase = true) }) {
+            players = players + Player(name = clean)
+        }
+    }
 
     Scaffold(topBar = {
         TopAppBar(
@@ -61,7 +75,8 @@ fun PlayersScreen(
                 FilledIconButton(
                     onClick = {
                         if (input.isNotBlank()) {
-                            players = players + Player(name = input.trim())
+                            addPlayer(input)
+                            roster = rosterRepository.add(input)
                             input = ""
                         }
                     },
@@ -84,6 +99,84 @@ fun PlayersScreen(
                 color = if (ready) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(Modifier.height(12.dp))
+
+            if (roster.isNotEmpty()) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "Jugadores guardados",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Row {
+                        if (!editRoster) {
+                            TextButton(onClick = { roster.forEach { addPlayer(it) } }) {
+                                Text("Añadir todos")
+                            }
+                        }
+                        TextButton(onClick = { editRoster = !editRoster }) {
+                            Text(if (editRoster) "Listo" else "Editar")
+                        }
+                    }
+                }
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 150.dp)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        roster.forEach { name ->
+                            val inTournament = players.any { it.name.equals(name, ignoreCase = true) }
+                            if (editRoster) {
+                                FilterChip(
+                                    selected = false,
+                                    onClick = {
+                                        roster = rosterRepository.remove(name)
+                                        if (roster.isEmpty()) editRoster = false
+                                    },
+                                    label = { Text(name) },
+                                    trailingIcon = {
+                                        Icon(
+                                            Icons.Default.Close,
+                                            contentDescription = "Quitar de la lista",
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                )
+                            } else {
+                                FilterChip(
+                                    selected = inTournament,
+                                    onClick = {
+                                        if (inTournament) {
+                                            players = players.filterNot { it.name.equals(name, ignoreCase = true) }
+                                        } else {
+                                            addPlayer(name)
+                                        }
+                                    },
+                                    label = { Text(name) },
+                                    leadingIcon = if (inTournament) {
+                                        {
+                                            Icon(
+                                                Icons.Default.Check,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    } else null
+                                )
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+            }
 
             LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(players, key = { it.id }) { p ->

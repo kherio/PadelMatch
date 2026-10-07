@@ -4,6 +4,15 @@ on:
   push:
     branches:
       - main
+    # Solo recompila y publica cuando cambia algo que afecta a la app;
+    # un cambio de README u otros ficheros no genera build ni release.
+    paths:
+      - 'app/**'
+      - 'gradle/**'
+      - 'build.gradle.kts'
+      - 'settings.gradle.kts'
+      - 'gradle.properties'
+      - '.github/workflows/build-and-release-apks.yml'
   workflow_dispatch:
 
 permissions:

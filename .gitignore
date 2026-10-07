@@ -11,3 +11,7 @@ local.properties
 *.apk
 *.aab
 app/build/
+
+# Keystores de firma: nunca al repositorio
+*.jks
+*.keystore
