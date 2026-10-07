@@ -87,6 +87,13 @@ class UpdateRepository {
     }
 
     fun downloadUrlFor(release: AppRelease): String {
+        // El APK oficial se publica como "PadelMatch-<versión>.apk"; es el único que se busca.
+        val named = release.assets.firstOrNull {
+            it.name.startsWith("PadelMatch", ignoreCase = true) &&
+                it.name.endsWith(".apk", ignoreCase = true)
+        }
+        if (named != null) return named.browserDownloadUrl
+
         val preferred = release.assets.firstOrNull {
             it.name.endsWith(".apk", ignoreCase = true) &&
                 !it.name.contains("debug", ignoreCase = true)
