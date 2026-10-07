@@ -33,6 +33,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     // Desde Kotlin 2.0, el compilador de Compose lo gestiona el plugin
     // org.jetbrains.kotlin.plugin.compose (ya aplicado arriba); no hace
