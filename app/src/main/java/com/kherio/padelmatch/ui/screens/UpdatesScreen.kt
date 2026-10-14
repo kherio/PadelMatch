@@ -79,7 +79,10 @@ fun UpdatesScreen(
                             contentDescription = "Buscar actualizaciones"
                         )
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = androidx.compose.ui.graphics.Color.Transparent
+                )
             )
         }
     ) { padding ->
