@@ -14,6 +14,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -31,7 +32,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -399,26 +402,40 @@ private fun MatchCard(match: MatchResult, players: List<Player>, pointsTarget: I
 
     val team1Winning = (s1.toIntOrNull() ?: -1) > (s2.toIntOrNull() ?: -1)
     val team2Winning = (s2.toIntOrNull() ?: -1) > (s1.toIntOrNull() ?: -1)
-    val maxDigits = pointsTarget.toString().length
 
-    // Al escribir el marcador de un equipo, se autocompleta el del otro para
-    // que la suma siempre sea igual a la puntuación objetivo del torneo.
-    fun onTeam1Change(raw: String) {
-        val digits = raw.filter { it.isDigit() }.take(maxDigits)
-        val value = digits.toIntOrNull()
-        s1 = if (value != null && value > pointsTarget) pointsTarget.toString() else digits
-        val v = s1.toIntOrNull()
-        s2 = if (v != null) (pointsTarget - v).coerceAtLeast(0).toString() else s2
-        onScoreChange(s1.toIntOrNull(), s2.toIntOrNull())
+    val haptics = LocalHapticFeedback.current
+    // 0 = teclado cerrado, 1 = marcador del equipo 1, 2 = marcador del equipo 2
+    var keypadTeam by remember(match.id) { mutableStateOf(0) }
+
+    // Al fijar el marcador de un equipo, se completa el del otro para que la
+    // suma siempre sea igual a la puntuación objetivo del torneo.
+    fun setTeam1(value: Int) {
+        val (a, b) = ScoreInput.complementary(value, pointsTarget)
+        s1 = a.toString()
+        s2 = b.toString()
+        onScoreChange(a, b)
     }
 
-    fun onTeam2Change(raw: String) {
-        val digits = raw.filter { it.isDigit() }.take(maxDigits)
-        val value = digits.toIntOrNull()
-        s2 = if (value != null && value > pointsTarget) pointsTarget.toString() else digits
-        val v = s2.toIntOrNull()
-        s1 = if (v != null) (pointsTarget - v).coerceAtLeast(0).toString() else s1
-        onScoreChange(s1.toIntOrNull(), s2.toIntOrNull())
+    fun setTeam2(value: Int) {
+        val (b, a) = ScoreInput.complementary(value, pointsTarget)
+        s1 = a.toString()
+        s2 = b.toString()
+        onScoreChange(a, b)
+    }
+
+    fun team1Label() = "${nameOf(match.team1.player1Id)} / ${nameOf(match.team1.player2Id)}"
+    fun team2Label() = "${nameOf(match.team2.player1Id)} / ${nameOf(match.team2.player2Id)}"
+
+    if (keypadTeam != 0) {
+        ScoreKeypadDialog(
+            title = if (keypadTeam == 1) team1Label() else team2Label(),
+            pointsTarget = pointsTarget,
+            onConfirm = { value ->
+                if (keypadTeam == 1) setTeam1(value) else setTeam2(value)
+                keypadTeam = 0
+            },
+            onDismiss = { keypadTeam = 0 }
+        )
     }
 
     val cardElevation by animateDpAsState(
@@ -454,9 +471,21 @@ private fun MatchCard(match: MatchResult, players: List<Player>, pointsTarget: I
                     name1 = nameOf(match.team1.player1Id),
                     name2 = nameOf(match.team1.player2Id),
                     highlighted = team1Winning,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f).padding(end = 8.dp)
                 )
-                ScoreField(value = s1, highlighted = team1Winning, maxDigits = maxDigits, onChange = ::onTeam1Change)
+                ScoreStepper(
+                    value = s1,
+                    highlighted = team1Winning,
+                    onMinus = {
+                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        setTeam1(ScoreInput.step(s1.toIntOrNull(), -1, pointsTarget))
+                    },
+                    onPlus = {
+                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        setTeam1(ScoreInput.step(s1.toIntOrNull(), +1, pointsTarget))
+                    },
+                    onValueClick = { keypadTeam = 1 }
+                )
             }
 
             Row(
@@ -476,9 +505,21 @@ private fun MatchCard(match: MatchResult, players: List<Player>, pointsTarget: I
                     name1 = nameOf(match.team2.player1Id),
                     name2 = nameOf(match.team2.player2Id),
                     highlighted = team2Winning,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f).padding(end = 8.dp)
                 )
-                ScoreField(value = s2, highlighted = team2Winning, maxDigits = maxDigits, onChange = ::onTeam2Change)
+                ScoreStepper(
+                    value = s2,
+                    highlighted = team2Winning,
+                    onMinus = {
+                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        setTeam2(ScoreInput.step(s2.toIntOrNull(), -1, pointsTarget))
+                    },
+                    onPlus = {
+                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        setTeam2(ScoreInput.step(s2.toIntOrNull(), +1, pointsTarget))
+                    },
+                    onValueClick = { keypadTeam = 2 }
+                )
             }
 
             Spacer(Modifier.height(6.dp))
@@ -508,26 +549,132 @@ private fun TeamNames(name1: String, name2: String, highlighted: Boolean, modifi
     }
 }
 
+/**
+ * Marcador con botones − / + (un punto cada vez) y, al tocar el número, un
+ * teclado numérico para teclear el marcador directamente.
+ */
 @Composable
-private fun ScoreField(value: String, highlighted: Boolean, maxDigits: Int, onChange: (String) -> Unit) {
+private fun ScoreStepper(
+    value: String,
+    highlighted: Boolean,
+    onMinus: () -> Unit,
+    onPlus: () -> Unit,
+    onValueClick: () -> Unit
+) {
     val borderColor by animateColorAsState(
         targetValue = if (highlighted) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outline,
-        label = "scoreFieldBorder"
+        label = "scoreBorder"
     )
-    OutlinedTextField(
-        value = value,
-        onValueChange = { onChange(it.filter { c -> c.isDigit() }.take(maxDigits)) },
-        modifier = Modifier.width(68.dp),
-        singleLine = true,
-        textStyle = androidx.compose.ui.text.TextStyle(
-            textAlign = TextAlign.Center,
-            fontWeight = FontWeight.Bold
-        ),
-        shape = RoundedCornerShape(12.dp),
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = MaterialTheme.colorScheme.primary,
-            unfocusedBorderColor = borderColor
-        )
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        OutlinedButton(
+            onClick = onMinus,
+            modifier = Modifier.size(44.dp),
+            shape = CircleShape,
+            contentPadding = PaddingValues(0.dp)
+        ) {
+            Text("−", style = MaterialTheme.typography.titleLarge)
+        }
+        Box(
+            Modifier
+                .width(56.dp)
+                .height(44.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .border(1.5.dp, borderColor, RoundedCornerShape(12.dp))
+                .clickable(onClick = onValueClick),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                if (value.isEmpty()) "–" else value,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+        }
+        Button(
+            onClick = onPlus,
+            modifier = Modifier.size(44.dp),
+            shape = CircleShape,
+            contentPadding = PaddingValues(0.dp)
+        ) {
+            Text("+", style = MaterialTheme.typography.titleLarge)
+        }
+    }
+}
+
+/**
+ * Teclado numérico propio para el marcador. Se cierra solo en cuanto el valor
+ * no puede alargarse con otro dígito (ver [ScoreInput.appendDigit]); con
+ * "Aceptar" se confirma lo tecleado si aún era ambiguo (por ejemplo un 1).
+ */
+@Composable
+private fun ScoreKeypadDialog(
+    title: String,
+    pointsTarget: Int,
+    onConfirm: (Int) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var digits by remember { mutableStateOf("") }
+
+    fun press(digit: Int) {
+        val result = ScoreInput.appendDigit(digits, digit, pointsTarget)
+        val confirmed = result.confirmed
+        if (confirmed != null) onConfirm(confirmed) else digits = result.digits
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title, style = MaterialTheme.typography.titleMedium) },
+        text = {
+            Column(Modifier.fillMaxWidth()) {
+                Text(
+                    if (digits.isEmpty()) "–" else digits,
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                    style = MaterialTheme.typography.displaySmall,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
+                )
+                val rows = listOf(
+                    listOf("1", "2", "3"),
+                    listOf("4", "5", "6"),
+                    listOf("7", "8", "9"),
+                    listOf("C", "0", "⌫")
+                )
+                rows.forEach { row ->
+                    Row(
+                        Modifier.fillMaxWidth().padding(vertical = 3.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        row.forEach { key ->
+                            FilledTonalButton(
+                                onClick = {
+                                    when (key) {
+                                        "C" -> digits = ""
+                                        "⌫" -> digits = digits.dropLast(1)
+                                        else -> press(key.toInt())
+                                    }
+                                },
+                                modifier = Modifier.weight(1f).height(52.dp),
+                                contentPadding = PaddingValues(0.dp)
+                            ) {
+                                Text(key, style = MaterialTheme.typography.titleLarge)
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                val value = digits.toIntOrNull()
+                if (value != null) onConfirm(value) else onDismiss()
+            }) { Text("Aceptar") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancelar") }
+        }
     )
 }
 
