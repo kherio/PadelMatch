@@ -1,11 +1,16 @@
 package com.kherio.padelmatch.data
 
+import android.content.Context
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
+import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
+import kotlin.coroutines.coroutineContext
 
 data class AppRelease(
     @SerializedName("tag_name") val tagName: String,
@@ -86,13 +91,13 @@ class UpdateRepository {
         }
     }
 
-    fun downloadUrlFor(release: AppRelease): String {
-        // El APK oficial se publica como "PadelMatch-<versión>.apk"; es el único que se busca.
+    /** El APK de la release: "PadelMatch-<versión>.apk"; si no, el primer APK que no sea debug. */
+    fun apkAssetFor(release: AppRelease): ReleaseAsset? {
         val named = release.assets.firstOrNull {
             it.name.startsWith("PadelMatch", ignoreCase = true) &&
                 it.name.endsWith(".apk", ignoreCase = true)
         }
-        if (named != null) return named.browserDownloadUrl
+        if (named != null) return named
 
         val preferred = release.assets.firstOrNull {
             it.name.endsWith(".apk", ignoreCase = true) &&
@@ -103,7 +108,48 @@ class UpdateRepository {
             it.name.endsWith(".apk", ignoreCase = true)
         }
 
-        return (preferred ?: fallback)?.browserDownloadUrl ?: release.htmlUrl
+        return preferred ?: fallback
+    }
+
+    fun hasApk(release: AppRelease): Boolean = apkAssetFor(release) != null
+
+    fun downloadUrlFor(release: AppRelease): String =
+        apkAssetFor(release)?.browserDownloadUrl ?: release.htmlUrl
+
+    /**
+     * Descarga el APK de la release a la caché de la app (sin permisos de
+     * almacenamiento) y comprueba que es un APK de PadelMatch antes de darlo
+     * por bueno. [onProgress] recibe 0..100, o -1 si no se conoce el tamaño.
+     */
+    suspend fun downloadUpdate(
+        context: Context,
+        release: AppRelease,
+        onProgress: (Int) -> Unit
+    ): File = withContext(Dispatchers.IO) {
+        val asset = apkAssetFor(release)
+            ?: throw IllegalStateException("La release no incluye ningún APK.")
+
+        val url = URL(asset.browserDownloadUrl)
+        val host = url.host.lowercase()
+        val trusted = url.protocol == "https" &&
+            (host == "github.com" || host.endsWith(".github.com") || host.endsWith(".githubusercontent.com"))
+        if (!trusted) throw IllegalStateException("La URL de descarga no es de GitHub.")
+
+        val dir = File(context.cacheDir, "updates")
+        dir.mkdirs()
+        dir.listFiles()?.forEach { it.delete() }
+
+        val target = File(dir, "PadelMatch-${normalizeVersion(release.tagName)}.apk")
+        val job = coroutineContext[Job]
+        ApkDownloader.download(asset.browserDownloadUrl, target, onProgress) { job?.ensureActive() }
+
+        @Suppress("DEPRECATION")
+        val info = context.packageManager.getPackageArchiveInfo(target.absolutePath, 0)
+        if (info == null || info.packageName != context.packageName) {
+            target.delete()
+            throw IllegalStateException("El archivo descargado no es un APK válido de PadelMatch.")
+        }
+        target
     }
 
     private fun normalizeVersion(version: String): String =

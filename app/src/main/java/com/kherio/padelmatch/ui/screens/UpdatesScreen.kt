@@ -18,13 +18,17 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.kherio.padelmatch.BuildConfig
 import com.kherio.padelmatch.data.AppRelease
 import com.kherio.padelmatch.data.UpdateCheckResult
+import com.kherio.padelmatch.data.UpdateInstaller
 import com.kherio.padelmatch.data.UpdateRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -138,7 +142,7 @@ fun UpdatesScreen(
                 is UpdateCheckResult.Available -> {
                     UpdateAvailableCard(
                         release = state.release,
-                        downloadUrl = repository.downloadUrlFor(state.release)
+                        repository = repository
                     )
                 }
 
@@ -228,12 +232,62 @@ private fun StatusCard(
     }
 }
 
+private sealed interface DownloadState {
+    data object Idle : DownloadState
+
+    /** [percent] 0..100, o -1 si GitHub no indica el tamaño total. */
+    data class Downloading(val percent: Int) : DownloadState
+
+    data class Ready(val file: File) : DownloadState
+
+    data class Failed(val message: String) : DownloadState
+}
+
 @Composable
 private fun UpdateAvailableCard(
     release: AppRelease,
-    downloadUrl: String
+    repository: UpdateRepository
 ) {
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val hasApk = repository.hasApk(release)
+
+    var state by remember(release.tagName) { mutableStateOf<DownloadState>(DownloadState.Idle) }
+    var needsPermission by remember(release.tagName) { mutableStateOf(false) }
+
+    // Abre el instalador de Android. La primera vez Android pide antes permiso
+    // para instalar desde esta app; al volver basta con pulsar "Instalar".
+    fun install(file: File) {
+        if (!UpdateInstaller.canInstall(context)) {
+            needsPermission = true
+            if (!UpdateInstaller.openInstallPermissionSettings(context)) {
+                state = DownloadState.Failed("No se pudo abrir el ajuste de permisos de Android.")
+            }
+            return
+        }
+        needsPermission = false
+        if (!UpdateInstaller.install(context, file)) {
+            state = DownloadState.Failed("No se pudo abrir el instalador de Android.")
+        }
+    }
+
+    fun startDownload() {
+        needsPermission = false
+        state = DownloadState.Downloading(-1)
+        scope.launch {
+            try {
+                val file = repository.downloadUpdate(context, release) { percent ->
+                    state = DownloadState.Downloading(percent)
+                }
+                state = DownloadState.Ready(file)
+                install(file)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                state = DownloadState.Failed(e.message ?: "No se pudo descargar la actualización.")
+            }
+        }
+    }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -278,18 +332,81 @@ private fun UpdateAvailableCard(
 
             Spacer(Modifier.height(18.dp))
 
-            Button(
-                onClick = {
-                    context.startActivity(
-                        Intent(Intent.ACTION_VIEW, Uri.parse(downloadUrl))
+            when (val s = state) {
+                is DownloadState.Downloading -> {
+                    Text(
+                        if (s.percent >= 0) "Descargando… ${s.percent} %" else "Descargando…",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
-                },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(50)
-            ) {
-                Icon(Icons.Default.CloudDownload, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text("Descargar actualización")
+                    Spacer(Modifier.height(8.dp))
+                    if (s.percent >= 0) {
+                        LinearProgressIndicator(
+                            progress = { s.percent / 100f },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    } else {
+                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                    }
+                }
+
+                is DownloadState.Ready -> {
+                    if (needsPermission) {
+                        Text(
+                            "Android pide permiso para instalar desde PadelMatch: " +
+                                "activa «Permitir desde esta fuente», vuelve aquí y pulsa Instalar.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        Spacer(Modifier.height(12.dp))
+                    }
+                    Button(
+                        onClick = { install(s.file) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(50)
+                    ) {
+                        Icon(Icons.Default.SystemUpdate, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Instalar")
+                    }
+                }
+
+                DownloadState.Idle, is DownloadState.Failed -> {
+                    val failed = state as? DownloadState.Failed
+                    if (failed != null) {
+                        Text(
+                            failed.message,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        Spacer(Modifier.height(12.dp))
+                    }
+                    Button(
+                        onClick = {
+                            if (hasApk) {
+                                startDownload()
+                            } else {
+                                context.startActivity(
+                                    Intent(Intent.ACTION_VIEW, Uri.parse(release.htmlUrl))
+                                )
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(50)
+                    ) {
+                        Icon(Icons.Default.CloudDownload, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            when {
+                                failed != null -> "Reintentar"
+                                hasApk -> "Descargar e instalar"
+                                else -> "Abrir en GitHub"
+                            }
+                        )
+                    }
+                }
             }
         }
     }
